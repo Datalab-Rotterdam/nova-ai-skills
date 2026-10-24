@@ -1,6 +1,7 @@
 ---
 name: nova-docx
 description: Read, create and edit Word documents (.docx), including comments, tracked changes, metadata and diffs. Use for any Word file the user attached or asks for.
+license: Apache-2.0, Copyright 2026 DataLab Rotterdam (LICENSE.txt)
 ---
 
 # Word documents (.docx)

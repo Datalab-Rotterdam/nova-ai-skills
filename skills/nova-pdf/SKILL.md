@@ -1,6 +1,7 @@
 ---
 name: nova-pdf
 description: Read, create and edit PDFs: text, merge, split, forms, comments and annotations, metadata, diffs, new PDFs. Use for any PDF the user attached or asks for.
+license: Apache-2.0, Copyright 2026 DataLab Rotterdam (LICENSE.txt)
 ---
 
 # PDF files

@@ -1,6 +1,7 @@
 ---
 name: nova-pptx
 description: Read, create and edit PowerPoint decks (.pptx): slides, charts, speaker notes, comments, metadata, diffs. Use for any presentation the user attached.
+license: Apache-2.0, Copyright 2026 DataLab Rotterdam (LICENSE.txt)
 ---
 
 # PowerPoint presentations (.pptx)

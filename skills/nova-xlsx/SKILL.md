@@ -1,6 +1,7 @@
 ---
 name: nova-xlsx
 description: Read, create and edit Excel workbooks (.xlsx, .xlsm): data, formulas, charts, notes and comments, metadata, diffs. Use for any spreadsheet the user attached.
+license: Apache-2.0, Copyright 2026 DataLab Rotterdam (LICENSE.txt)
 ---
 
 # Excel workbooks (.xlsx)

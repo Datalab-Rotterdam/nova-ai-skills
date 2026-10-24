@@ -39,3 +39,11 @@ same installer, so the newest package wins:
 Conventional commits on `main` (stable) and `alpha` (prerelease) are released to
 npm by semantic-release. A change to a skill is a `feat:` or `fix:` like any other,
 so the apps pick it up with their next dependency update.
+
+## License
+
+Copyright 2026 DataLab Rotterdam. The skills and the installer are licensed under
+the [Apache License 2.0](LICENSE) and are free for public use: anyone may use,
+copy, change and share them, also commercially and outside Nova AI, as long as
+the license and the [NOTICE](NOTICE) are kept. Each skill carries its own
+`LICENSE.txt` and `NOTICE`, so an installed copy stays licensed on its own.
