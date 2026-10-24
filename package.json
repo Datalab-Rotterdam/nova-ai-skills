@@ -1,0 +1,72 @@
+{
+  "name": "@datalabrotterdam/nova-ai-skills",
+  "version": "0.0.0-development",
+  "description": "Skills every Nova AI app ships (Word, Excel, PowerPoint, PDF), with the installer that keeps them up to date in ~/.nova-ai/skills",
+  "license": "Apache-2.0",
+  "author": "DataLab Rotterdam",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Datalab-Rotterdam/nova-ai-skills.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Datalab-Rotterdam/nova-ai-skills/issues"
+  },
+  "homepage": "https://github.com/Datalab-Rotterdam/nova-ai-skills#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "skills",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "semantic-release": "^25.0.9"
+  },
+  "release": {
+    "branches": [
+      "main",
+      {
+        "name": "alpha",
+        "prerelease": true
+      }
+    ],
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/changelog",
+      "@semantic-release/npm",
+      [
+        "@semantic-release/git",
+        {
+          "assets": [
+            "package.json",
+            "CHANGELOG.md"
+          ],
+          "message": "nova-ai-skills(release): 🚀 v${nextRelease.version}\n\n${nextRelease.notes}"
+        }
+      ]
+    ]
+  }
+}
