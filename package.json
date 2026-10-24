@@ -1,6 +1,6 @@
 {
   "name": "@datalabrotterdam/nova-ai-skills",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.2",
   "description": "Skills every Nova AI app ships (Word, Excel, PowerPoint, PDF), with the installer that keeps them up to date in ~/.nova-ai/skills",
   "license": "Apache-2.0",
   "author": "DataLab Rotterdam",
