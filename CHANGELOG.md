@@ -5,7 +5,7 @@
 
 * load in a CommonJS bundle ([78af04f](https://github.com/Datalab-Rotterdam/nova-ai-skills/commit/78af04fabed515d0dec5e55af0e695e77d9194f8))
 
-# 1.0.0-alpha.1 (2026-10-24)
+# 1.0.0 (2026-10-24)
 
 
 ### Features
