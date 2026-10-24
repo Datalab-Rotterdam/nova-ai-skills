@@ -14,9 +14,13 @@ import { fileURLToPath } from 'node:url';
 
 export const BUNDLE_FILE = '.nova-bundled.json';
 export const BUNDLED_BY = 'Nova AI Skills';
-/** The skills folder of this package. */
-export const SKILLS_DIR = fileURLToPath(new URL('./skills/', import.meta.url));
-export const VERSION = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version;
+// A bundler that turns this into CommonJS (esbuild for a VS Code extension) leaves import.meta empty:
+// then both are undefined, and the app passes sourceDir and version to installSkills itself.
+const base = typeof import.meta.url === 'string' ? import.meta.url : undefined;
+/** The skills folder of this package; undefined when bundled. */
+export const SKILLS_DIR = base && fileURLToPath(new URL('./skills/', base));
+/** This package's version; undefined when bundled. */
+export const VERSION = base && JSON.parse(readFileSync(new URL('./package.json', base), 'utf8')).version;
 
 /** Apps that installed these skills before this package existed; their copies are taken over. */
 const FORMER_OWNERS = ['Nova AI for VS Code'];
@@ -93,6 +97,7 @@ async function copySkill(from, to) {
  * `sourceDir` and `version` are for tests.
  */
 export async function installSkills(novaHome, { sourceDir = SKILLS_DIR, version = VERSION } = {}) {
+    if (!sourceDir || !version) throw new Error('installSkills needs sourceDir and version when this package is bundled.');
     const installed = [];
     for (const name of RETIRED_SKILLS) {
         const old = path.join(novaHome, 'skills', name);

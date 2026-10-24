@@ -3,6 +3,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, wr
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { BUNDLE_FILE, BUNDLED_BY, SKILLS_DIR, compareVersions, installSkills } from '../index.js';
 
 let base;
@@ -125,4 +126,14 @@ it('compareVersions orders releases and prereleases', () => {
     assert.equal(compareVersions('1.0.0', '1.0.0-alpha.3'), 1);
     assert.equal(compareVersions('1.0.0-alpha.10', '1.0.0-alpha.9'), 1);
     assert.equal(compareVersions('1.0.0', '1.0.0'), 0);
+});
+
+it('loads in a CommonJS bundle, where import.meta is empty', async () => {
+    const { buildSync } = await import('esbuild');
+    const out = join(mkdtempSync(join(tmpdir(), 'nova-skills-cjs-')), 'bundle.cjs');
+    buildSync({ entryPoints: [fileURLToPath(new URL('../index.js', import.meta.url))], bundle: true, platform: 'node', format: 'cjs', outfile: out, logLevel: 'silent' });
+    const { createRequire } = await import('node:module');
+    const bundled = createRequire(import.meta.url)(out);
+    assert.equal(bundled.SKILLS_DIR, undefined);
+    await assert.rejects(bundled.installSkills(join(tmpdir(), 'unused')), /needs sourceDir and version/);
 });
