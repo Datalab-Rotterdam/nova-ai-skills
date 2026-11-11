@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { BUNDLE_FILE, BUNDLED_BY, SKILLS_DIR, compareVersions, installSkills } from '../index.js';
+import { BUNDLE_FILE, BUNDLED_BY, SKILLS_DIR, VERSION, compareVersions, installSkills, removeSkills } from '../index.js';
 
 let base;
 let source;
@@ -128,12 +129,86 @@ it('compareVersions orders releases and prereleases', () => {
     assert.equal(compareVersions('1.0.0', '1.0.0'), 0);
 });
 
-it('loads in a CommonJS bundle, where import.meta is empty', async () => {
+it('installs the embedded copies from a CommonJS bundle, where import.meta is empty', async () => {
     const { buildSync } = await import('esbuild');
-    const out = join(mkdtempSync(join(tmpdir(), 'nova-skills-cjs-')), 'bundle.cjs');
+    const dir = mkdtempSync(join(tmpdir(), 'nova-skills-cjs-'));
+    const out = join(dir, 'bundle.cjs');
     buildSync({ entryPoints: [fileURLToPath(new URL('../index.js', import.meta.url))], bundle: true, platform: 'node', format: 'cjs', outfile: out, logLevel: 'silent' });
     const { createRequire } = await import('node:module');
     const bundled = createRequire(import.meta.url)(out);
     assert.equal(bundled.SKILLS_DIR, undefined);
-    await assert.rejects(bundled.installSkills(join(tmpdir(), 'unused')), /needs sourceDir and version/);
+    assert.equal(bundled.VERSION, VERSION);
+    const home = join(dir, '.nova-ai');
+    assert.deepEqual((await bundled.installSkills(home, { include: ['nova-browser'] })).sort(), ['nova-browser', 'nova-docx', 'nova-pdf', 'nova-pptx', 'nova-xlsx']);
+    // The same files as from the package folder.
+    const fromDisk = join(dir, 'disk');
+    await installSkills(fromDisk, { include: ['nova-browser'] });
+    for (const name of ['nova-browser', 'nova-docx']) {
+        assert.equal(JSON.parse(readFileSync(join(home, 'skills', name, BUNDLE_FILE), 'utf8')).hash, JSON.parse(readFileSync(join(fromDisk, 'skills', name, BUNDLE_FILE), 'utf8')).hash);
+    }
+    rmSync(dir, { recursive: true, force: true });
+});
+
+it('embedded.js is current (run npm run embed)', async () => {
+    const { embeddedSource } = await import('../scripts/embed.mjs');
+    assert.equal(readFileSync(new URL('../embedded.js', import.meta.url), 'utf8'), embeddedSource());
+});
+
+describe('nova-browser (optional)', () => {
+    const folder = () => join(novaHome, 'skills', 'nova-browser');
+
+    it('is installed only for an app that asks for it, read-only with runnable scripts', async () => {
+        assert.ok(!(await installSkills(novaHome)).includes('nova-browser'));
+        assert.equal(existsSync(folder()), false);
+        assert.deepEqual(await installSkills(novaHome, { include: ['nova-browser'] }), ['nova-browser']);
+        if (process.platform !== 'win32') {
+            assert.equal(statSync(join(folder(), 'SKILL.md')).mode & 0o777, 0o444);
+            assert.equal(statSync(join(folder(), 'scripts', 'nova-browser')).mode & 0o777, 0o555);
+        }
+        // An app without it leaves another app's copy alone.
+        await installSkills(novaHome);
+        assert.equal(existsSync(join(folder(), 'SKILL.md')), true);
+    });
+
+    it('is removed when the app switches the browser off, but never a folder of the user', async () => {
+        await installSkills(novaHome, { include: ['nova-browser'] });
+        assert.deepEqual(await removeSkills(novaHome, ['nova-browser']), ['nova-browser']);
+        assert.equal(existsSync(folder()), false);
+
+        mkdirSync(folder(), { recursive: true });
+        writeFileSync(join(folder(), 'SKILL.md'), 'mine');
+        assert.deepEqual(await removeSkills(novaHome, ['nova-browser']), []);
+        assert.equal(readFileSync(join(folder(), 'SKILL.md'), 'utf8'), 'mine');
+    });
+
+    it('takes over the copy the browser host installed', async () => {
+        mkdirSync(folder(), { recursive: true });
+        writeFileSync(join(folder(), 'SKILL.md'), 'old');
+        mkdirSync(join(folder(), 'scripts'));
+        writeFileSync(join(folder(), 'scripts', 'nova-browser'), 'old');
+        writeFileSync(join(folder(), BUNDLE_FILE), JSON.stringify({ bundledBy: 'Nova AI Browser', version: '1.3.0', hash: 'x' }));
+        // The host locked its folders as well as its files.
+        for (const dir of [join(folder(), 'scripts'), folder()]) chmodSync(dir, 0o555);
+        assert.ok((await installSkills(novaHome, { include: ['nova-browser'] })).includes('nova-browser'));
+        assert.equal(marker('nova-browser').bundledBy, BUNDLED_BY);
+        // And it can be removed again.
+        for (const dir of [join(folder(), 'scripts'), folder()]) chmodSync(dir, 0o555);
+        assert.deepEqual(await removeSkills(novaHome, ['nova-browser']), ['nova-browser']);
+        assert.equal(existsSync(folder()), false);
+    });
+
+    it('runs the browser host the Nova apps registered', { skip: process.platform === 'win32' }, async () => {
+        await installSkills(novaHome, { include: ['nova-browser'] });
+        const script = join(folder(), 'scripts', 'nova-browser');
+        const browserHome = join(base, 'browser');
+        const run = () => spawnSync(script, ['tabs_context', 'x=1'], { encoding: 'utf8', env: { ...process.env, NOVA_AI_BROWSER_HOME: browserHome } });
+
+        const missing = run();
+        assert.equal(missing.status, 2);
+        assert.match(missing.stderr, /not set up/);
+
+        mkdirSync(join(browserHome, 'bin'), { recursive: true });
+        writeFileSync(join(browserHome, 'bin', 'nova-ai-browser-host'), '#!/bin/sh\necho "host $*"\n', { mode: 0o755 });
+        assert.equal(run().stdout, 'host call tabs_context x=1\n');
+    });
 });

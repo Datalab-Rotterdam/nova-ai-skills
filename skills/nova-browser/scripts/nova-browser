@@ -1,0 +1,9 @@
+#!/bin/sh
+# Nova AI Browser: run a browser tool. Usage: nova-browser <tool> [key=value ...] | nova-browser tools
+# Runs the browser host the Nova apps registered (with Node, or inside Nova AI Desktop).
+host="${NOVA_AI_BROWSER_HOME:-$HOME/.nova-ai/browser}/bin/nova-ai-browser-host"
+if [ ! -x "$host" ]; then
+    echo "Nova AI Browser is not set up on this computer. Turn on the Nova AI Browser plug-in in Nova AI Desktop, or start Nova AI for VS Code or the Nova AI CLI once, then restart the browser." >&2
+    exit 2
+fi
+exec "$host" call "$@"
