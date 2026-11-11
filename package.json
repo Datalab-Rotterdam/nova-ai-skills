@@ -1,7 +1,7 @@
 {
   "name": "@datalabrotterdam/nova-ai-skills",
   "version": "1.0.1-alpha.1",
-  "description": "Skills every Nova AI app ships (Word, Excel, PowerPoint, PDF), with the installer that keeps them up to date in ~/.nova-ai/skills",
+  "description": "Skills every Nova AI app ships (Word, Excel, PowerPoint, PDF, and the Nova AI Browser), with the installer that keeps them up to date in ~/.nova-ai/skills",
   "license": "Apache-2.0",
   "author": "DataLab Rotterdam",
   "type": "module",
@@ -32,13 +32,16 @@
     "NOTICE",
     "index.js",
     "index.d.ts",
+    "embedded.js",
     "skills",
     "LICENSE",
     "README.md",
     "CHANGELOG.md"
   ],
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "embed": "node scripts/embed.mjs",
+    "prepack": "node scripts/embed.mjs"
   },
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
@@ -64,9 +67,10 @@
         {
           "assets": [
             "package.json",
-            "CHANGELOG.md"
+            "CHANGELOG.md",
+            "embedded.js"
           ],
-          "message": "nova-ai-skills(release): 🚀 v${nextRelease.version}\n\n${nextRelease.notes}"
+          "message": "nova-ai-skills(release): \ud83d\ude80 v${nextRelease.version}\n\n${nextRelease.notes}"
         }
       ]
     ]

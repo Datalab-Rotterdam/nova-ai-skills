@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { embedded } from './embedded.js';
 
 /*
  * The skills in skills/<name>/, installed into <novaHome>/skills as bundled skills
@@ -10,20 +11,35 @@ import { fileURLToPath } from 'node:url';
  * reinstalled when this package is newer or the installed copy was edited. Every Nova
  * app carries this package and calls installSkills at start-up; the newest one wins.
  * A skill folder without our marker is the user's own and is never touched.
+ *
+ * Optional skills (OPTIONAL_SKILLS) are only installed for an app that asks for them, such as
+ * nova-browser while the app has Nova AI Browser switched on, and removed with removeSkills.
  */
 
 export const BUNDLE_FILE = '.nova-bundled.json';
 export const BUNDLED_BY = 'Nova AI Skills';
-// A bundler that turns this into CommonJS (esbuild for a VS Code extension) leaves import.meta empty:
-// then both are undefined, and the app passes sourceDir and version to installSkills itself.
+// A bundler that turns this into CommonJS (esbuild for a VS Code extension) leaves import.meta empty,
+// and an app compiled into one executable (Bun) has no skills/ or package.json on disk. Then the
+// copies in embedded.js (scripts/embed.mjs) are installed.
 const base = typeof import.meta.url === 'string' ? import.meta.url : undefined;
 /** The skills folder of this package; undefined when bundled. */
 export const SKILLS_DIR = base && fileURLToPath(new URL('./skills/', base));
-/** This package's version; undefined when bundled. */
-export const VERSION = base && JSON.parse(readFileSync(new URL('./package.json', base), 'utf8')).version;
+
+function ownVersion() {
+    try {
+        return base && JSON.parse(readFileSync(new URL('./package.json', base), 'utf8')).version;
+    } catch {
+        return undefined;
+    }
+}
+/** This package's version. */
+export const VERSION = ownVersion() ?? embedded.version;
+
+/** Skills only installed for apps that ask for them (`include`), such as nova-browser. */
+export const OPTIONAL_SKILLS = ['nova-browser'];
 
 /** Apps that installed these skills before this package existed; their copies are taken over. */
-const FORMER_OWNERS = ['Nova AI for VS Code'];
+const FORMER_OWNERS = ['Nova AI for VS Code', 'Nova AI Browser'];
 /** Skills an earlier version shipped under another name; removed when they are ours. */
 const RETIRED_SKILLS = ['nova-documents'];
 
@@ -81,33 +97,74 @@ export function compareVersions(a, b) {
     return Math.sign(preA.localeCompare(preB, 'en', { numeric: true }));
 }
 
-async function copySkill(from, to) {
-    await fs.rm(to, { recursive: true, force: true });
-    for (const file of await listFiles(from)) {
+/** The skills in a folder: each with its files and a way to read them. */
+async function skillsFromFolder(dir) {
+    const skills = [];
+    for (const entry of await fs.readdir(dir, { withFileTypes: true }).catch(() => [])) {
+        const from = path.join(dir, entry.name);
+        if (!entry.isDirectory() || !(await fs.stat(path.join(from, 'SKILL.md')).catch(() => undefined))) continue;
+        const files = (await listFiles(from)).map((file) => ({ file, read: () => fs.readFile(path.join(from, ...file.split('/'))) }));
+        skills.push({ name: entry.name, files });
+    }
+    return skills;
+}
+
+/** The skills in embedded.js. */
+function embeddedSkills() {
+    const skills = new Map();
+    for (const [name, content] of Object.entries(embedded.files)) {
+        const [skill, ...rest] = name.split('/');
+        const data = typeof content === 'string' ? Buffer.from(content, 'utf8') : Buffer.from(content.base64, 'base64');
+        if (!skills.has(skill)) skills.set(skill, []);
+        skills.get(skill).push({ file: rest.join('/'), read: async () => data });
+    }
+    return [...skills].filter(([, files]) => files.some(({ file }) => file === 'SKILL.md')).map(([name, files]) => ({ name, files }));
+}
+
+/**
+ * Removes a skill folder. Former owners locked their folders too (the browser host made them
+ * 0555), and a folder's entries cannot be removed while it is read-only: unlock them first.
+ */
+async function removeFolder(folder) {
+    const unlock = async (dir) => {
+        await fs.chmod(dir, 0o755).catch(() => undefined);
+        for (const entry of await fs.readdir(dir, { withFileTypes: true }).catch(() => [])) {
+            if (entry.isDirectory()) await unlock(path.join(dir, entry.name));
+        }
+    };
+    await unlock(folder);
+    await fs.rm(folder, { recursive: true, force: true });
+}
+
+async function copySkill(skill, to) {
+    await removeFolder(to);
+    for (const { file, read } of skill.files) {
         const target = path.join(to, ...file.split('/'));
         await fs.mkdir(path.dirname(target), { recursive: true });
-        await fs.copyFile(path.join(from, ...file.split('/')), target);
-        await fs.chmod(target, file.endsWith('.py') ? 0o555 : 0o444).catch(() => undefined);
+        await fs.writeFile(target, await read());
+        // Read-only, scripts runnable (Python scripts and nova-browser's launchers).
+        await fs.chmod(target, file.startsWith('scripts/') ? 0o555 : 0o444).catch(() => undefined);
     }
 }
 
 /**
  * Installs or updates the skills under `<novaHome>/skills`. Returns the names it (re)installed.
  * A copy installed by a newer version is left alone, as is one of this version that nobody edited.
- * `sourceDir` and `version` are for tests.
+ * Optional skills are installed only when `include` names them; a copy that is there already is
+ * left as it is otherwise (another app may use it). `sourceDir` and `version` are for tests and
+ * for apps that ship the skills folder themselves.
  */
-export async function installSkills(novaHome, { sourceDir = SKILLS_DIR, version = VERSION } = {}) {
-    if (!sourceDir || !version) throw new Error('installSkills needs sourceDir and version when this package is bundled.');
+export async function installSkills(novaHome, { sourceDir, version = VERSION, include = [] } = {}) {
+    const folder = sourceDir ?? (SKILLS_DIR && existsSync(SKILLS_DIR) ? SKILLS_DIR : undefined);
+    const skills = folder ? await skillsFromFolder(folder) : embeddedSkills();
     const installed = [];
     for (const name of RETIRED_SKILLS) {
         const old = path.join(novaHome, 'skills', name);
-        if (ours(await readMarker(old))) await fs.rm(old, { recursive: true, force: true });
+        if (ours(await readMarker(old))) await removeFolder(old);
     }
-    const sources = await fs.readdir(sourceDir, { withFileTypes: true }).catch(() => []);
-    for (const source of sources) {
-        const from = path.join(sourceDir, source.name);
-        if (!source.isDirectory() || !(await fs.stat(path.join(from, 'SKILL.md')).catch(() => undefined))) continue;
-        const to = path.join(novaHome, 'skills', source.name);
+    for (const skill of skills) {
+        if (OPTIONAL_SKILLS.includes(skill.name) && !include.includes(skill.name)) continue;
+        const to = path.join(novaHome, 'skills', skill.name);
         if (await fs.stat(to).catch(() => undefined)) {
             const marker = await readMarker(to);
             if (!ours(marker)) continue;
@@ -118,10 +175,25 @@ export async function installSkills(novaHome, { sourceDir = SKILLS_DIR, version 
                 if (order > 0 || (order === 0 && !edited)) continue;
             }
         }
-        await copySkill(from, to);
+        await copySkill(skill, to);
         const hash = await hashSkill(to);
         await fs.writeFile(path.join(to, BUNDLE_FILE), `${JSON.stringify({ bundledBy: BUNDLED_BY, version, hash }, null, 2)}\n`, { mode: 0o444 });
-        installed.push(source.name);
+        installed.push(skill.name);
     }
     return installed;
+}
+
+/**
+ * Removes skills this package (or a former owner) installed, such as nova-browser when the app
+ * switches Nova AI Browser off. A folder without our marker is never touched. Returns the names removed.
+ */
+export async function removeSkills(novaHome, names) {
+    const removed = [];
+    for (const name of names) {
+        const folder = path.join(novaHome, 'skills', name);
+        if (!ours(await readMarker(folder))) continue;
+        await removeFolder(folder);
+        removed.push(name);
+    }
+    return removed;
 }
