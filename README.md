@@ -8,8 +8,9 @@ The skills every Nova AI app ships, and the installer that keeps them up to date
 | `nova-xlsx` | Excel workbooks: data, formulas, charts, notes and comments, diffs |
 | `nova-pptx` | PowerPoint decks: slides, charts, speaker notes, comments, diffs |
 | `nova-pdf` | PDFs: text, merge, split, forms, annotations, diffs, new PDFs |
+| `nova-browser` | The user's own browser through the Nova AI extension (optional, see below) |
 
-The scripts need Python 3. `scripts/ensure_env.py` installs the libraries they
+The document scripts need Python 3. `scripts/ensure_env.py` installs the libraries they
 use into Nova's own environment (`~/.nova-ai/python-env`), never the system
 Python; that needs the internet the first time.
 
@@ -33,6 +34,27 @@ same installer, so the newest package wins:
 - A folder without our marker is the user's and is never touched. Copies the
   VS Code extension installed before this package existed are taken over.
 - Switching a skill off (`skills.disabled` in the settings) survives updates.
+
+The installer also works where this package is bundled or compiled into one executable
+(a VS Code extension, Nova AI Desktop's sidecar): it then installs the copies in
+`embedded.js`, which `npm run embed` writes and packing refreshes.
+
+### Optional skills: nova-browser
+
+`nova-browser` is only useful while the Nova AI Browser host is registered, so it is not
+installed by default. An app installs it while it has the browser switched on, and removes it
+when it switches it off:
+
+```js
+import { installSkills, removeSkills } from '@datalabrotterdam/nova-ai-skills';
+
+await installSkills(novaHome, { include: ['nova-browser'] }); // browser on
+await removeSkills(novaHome, ['nova-browser']);               // browser off, no host left
+```
+
+An app that does not ask for it leaves a copy another app installed alone. Its script runs the
+host wrapper the apps register (`~/.nova-ai/browser/bin/nova-ai-browser-host`), whether that runs
+Node or an app that carries the host, such as Nova AI Desktop.
 
 ## Releasing
 

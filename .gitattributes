@@ -1,0 +1,5 @@
+# Fixed line endings on every checkout: embedded.js holds the skills byte for byte, and a test
+# compares it and their hashes with the files on disk (Windows would turn LF into CRLF).
+* text=auto eol=lf
+# cmd.exe reads batch files with CRLF line endings most reliably.
+*.cmd text eol=crlf

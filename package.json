@@ -32,13 +32,16 @@
     "NOTICE",
     "index.js",
     "index.d.ts",
+    "embedded.js",
     "skills",
     "LICENSE",
     "README.md",
     "CHANGELOG.md"
   ],
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "embed": "node scripts/embed.mjs",
+    "prepack": "node scripts/embed.mjs"
   },
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
@@ -64,7 +67,8 @@
         {
           "assets": [
             "package.json",
-            "CHANGELOG.md"
+            "CHANGELOG.md",
+            "embedded.js"
           ],
           "message": "nova-ai-skills(release): 🚀 v${nextRelease.version}\n\n${nextRelease.notes}"
         }
