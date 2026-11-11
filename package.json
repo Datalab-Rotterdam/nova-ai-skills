@@ -41,7 +41,8 @@
   "scripts": {
     "test": "node --test",
     "embed": "node scripts/embed.mjs",
-    "prepack": "node scripts/embed.mjs"
+    "prepack": "node scripts/embed.mjs",
+    "version": "node scripts/embed.mjs"
   },
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
