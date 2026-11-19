@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/Datalab-Rotterdam/nova-ai-skills/compare/v1.1.0...v1.2.0) (2026-11-19)
+
+
+### Features
+
+* add Outlook and Teams skills ([67fda34](https://github.com/Datalab-Rotterdam/nova-ai-skills/commit/67fda34f861ff3dab4213a5294011f74f0ed3124))
+
 # [1.1.0](https://github.com/Datalab-Rotterdam/nova-ai-skills/compare/v1.0.1...v1.1.0) (2026-11-11)
 
 
