@@ -8,11 +8,20 @@ The skills every Nova AI app ships, and the installer that keeps them up to date
 | `nova-xlsx` | Excel workbooks: data, formulas, charts, notes and comments, diffs |
 | `nova-pptx` | PowerPoint decks: slides, charts, speaker notes, comments, diffs |
 | `nova-pdf` | PDFs: text, merge, split, forms, annotations, diffs, new PDFs |
+| `nova-ms-outlook` (alias `outlook`) | Outlook: draft e-mails, prepare events, open views; desktop Outlook on Windows and macOS, otherwise Outlook on the web |
+| `nova-ms-teams` (alias `teams`) | Teams: prepare chat messages, schedule meetings, open channels; Teams app or Teams on the web |
 | `nova-browser` | The user's own browser through the Nova AI extension (optional, see below) |
 
 The document scripts need Python 3. `scripts/ensure_env.py` installs the libraries they
 use into Nova's own environment (`~/.nova-ai/python-env`), never the system
 Python; that needs the internet the first time.
+
+`nova-ms-outlook` and `nova-ms-teams` need only Python's standard library. It checks which Outlook is installed
+(new or classic Outlook for Windows, Outlook for Mac), opens forms and views there, and falls
+back to Outlook on the web. `nova-ms-teams` does the same for Teams: it fills in a chat
+message or the meeting form in the Teams app, or on the web without it. Neither ever sends or
+saves anything itself. Every e-mail and meeting they prepare ends with "Made by: Nova AI
+(Datalab Rotterdam)" in the user's language, so it is always clear that AI made it. Each `SKILL.md` names its short alias in `aliases:`.
 
 ## Using it in a Nova app
 
