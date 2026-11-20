@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/Datalab-Rotterdam/nova-ai-skills/compare/v1.2.0...v1.2.1) (2026-11-20)
+
+
+### Bug Fixes
+
+* **nova-browser:** say Nova's tab group starts with a new empty tab ([daccc78](https://github.com/Datalab-Rotterdam/nova-ai-skills/commit/daccc78e063a8d7ab9571cdd2f80bef02eab949b))
+
 # [1.2.0](https://github.com/Datalab-Rotterdam/nova-ai-skills/compare/v1.1.0...v1.2.0) (2026-11-19)
 
 
