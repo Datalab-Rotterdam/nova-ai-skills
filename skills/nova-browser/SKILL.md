@@ -48,8 +48,10 @@ CLI once, and to restart the browser after that. Do not keep retrying.
 ## Workflow
 
 1. **`tabs_context` first.** It returns the tabs in the purple "Nova" tab group; only those can be
-   controlled. When there is no group yet, the user's current tab becomes the group. For a new
-   task, open your own tab with `tabs_create` (with a `url`) instead of taking over the user's tab.
+   controlled. When there is no group yet, Nova creates it with a new empty tab: open sites in it
+   with `navigate`, and more tabs with `tabs_create` (with a `url`). The user's own tabs join only
+   when they hand one over ("Use this tab" in the side panel); if the task is about a page the user
+   has open, ask them to do that, or open its URL yourself.
 2. **Look before acting.** `read_page` lists interactive elements with refs
    (`button "Sign in" [ref_12]`); `find` searches for one element (`query="search box"`);
    `get_page_text` reads articles and results. Take a `computer action=screenshot` when layout or
